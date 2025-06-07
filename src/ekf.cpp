@@ -1,0 +1,95 @@
+#include "reloc_ros2/ekf.hpp"
+
+namespace ekf
+{
+    EKF::EKF()
+    {
+        x_position_ = vec3_t(0.0, 0.0, 0.0);
+        x_velocity_ = vec3_t(0.0, 0.0, 0.0);
+        x_quat_ = quat_t(1.0, 0.0, 0.0, 0.0);
+
+        cov_ = mat9x9_t::Identity() * 0.01;
+    }
+
+    void EKF::setEstNoise(const float& accel_var, const float& gyro_var, const float delta_time)
+    {
+        estimation_noise_.block<3,3>(0,0) = accel_var * mat3x3_t::Identity();
+        estimation_noise_.block<3,3>(3,3) = gyro_var * mat3x3_t::Identity();
+        estimation_noise_ *= delta_time * delta_time;
+    }
+
+    void EKF::predictUpdate(vec3_t& imu_accel,vec3_t& imu_gyro, const float& delta_time)
+    {
+        const mat3x3_t last_rotation_matrix = x_quat_.toRotationMatrix();
+
+        const vec3_t gravity = vec3_t(0.0,0.0,8.7);
+
+        const vec3_t fixed_accel = last_rotation_matrix * imu_accel + gravity;
+
+        x_position_ += delta_time * x_velocity_ + 0.5 * delta_time * delta_time * fixed_accel;
+        x_velocity_ += delta_time * fixed_accel;
+
+        x_quat_ = x_quat_ * gyro2quat(imu_gyro, delta_time);
+        x_quat_.normalize();
+
+        mat9x9_t F = mat9x9_t::Identity();
+        F.block<3,3>(0,3) = delta_time * mat3x3_t::Identity();
+        F.block<3,3>(3,6) = -1.0 * last_rotation_matrix * skew_symmetric(imu_accel) * delta_time;
+
+        mat9x6_t l_jacob = mat9x6_t::Zero();
+        l_jacob.block<6,6>(3,0) = mat6x6_t::Identity();
+
+        cov_ = F * cov_ * F.transpose() + l_jacob * estimation_noise_ * l_jacob.transpose();
+    }
+
+    void EKF::measurementUpdate(const vec7_t& observation, const float& obs_var)
+    {
+        mat3x9_t h_jacob = mat3x9_t::Zero();
+        h_jacob.block<3,3>(0,0) = mat3x3_t::Identity();
+
+        mat3x3_t observation_noise = obs_var * mat3x3_t::Identity();
+
+        const mat9x3_t K = cov_ * h_jacob.transpose() * (h_jacob * cov_ * h_jacob.transpose() + observation_noise).inverse();
+
+        vec3_t obs_pose = vec3_t(observation(0), observation(1), observation(2));
+
+        const vec3_t residual = obs_pose - x_position_;
+        vec9_t delta_x = K * residual;
+
+        x_position_ += delta_x.segment<3>(0);
+        x_velocity_ += delta_x.segment<3>(3);
+
+        vec3_t d_theta = delta_x.segment<3>(6);
+
+        x_quat_ = x_quat_ * angle2quat(d_theta);
+        x_quat_.normalize();
+
+        const mat9x9_t I = mat9x9_t::Identity();
+        cov_ = (I - K * h_jacob) * cov_;
+    }
+
+    vec7_t EKF::getOdometry()
+    {
+        return vec7_t(
+            x_position_(0),
+            x_position_(1),
+            x_position_(2),
+            x_quat_.x(),
+            x_quat_.y(),
+            x_quat_.z(),
+            x_quat_.w()
+        );
+    }
+
+    mat3x3_t skew_symmetric(const vec3_t& v)
+    {
+        mat3x3_t m;
+
+        m << 
+            0, -v(2),  v(1),
+            v(2),    0, -v(0),
+            -v(1), v(0),    0;
+
+        return m;
+    }
+}

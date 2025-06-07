@@ -1,0 +1,11 @@
+<launch>
+    <node pkg="reloc_ros2" exec="reloc" name="reloc">
+        <remap from="/rgbd" to="/camera/camera/rgbd"/>
+        <remap from="/imu" to="/camera/camera/imu"/>
+
+        <param name="enable_log" value="true"/>
+        <param name="frame_id" value="camera_color_optical_frame"/>
+    </node>
+
+    <include file="$(find-pkg-share reloc_ros2)/launch/rs_launch.py"/>
+</launch>

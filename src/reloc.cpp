@@ -88,19 +88,19 @@ namespace reloc_ros2
             RCLCPP_INFO(this->get_logger(), "compute ekf...");
 
             auto accel = vec3_t(
-                msg->linear_acceleration.z,
+                -1.0*msg->linear_acceleration.z,
                 -1.0*msg->linear_acceleration.x,
                 msg->linear_acceleration.y
             );
 
             auto gyro = vec3_t(
-                0.0,
-                0.0,
+                msg->angular_velocity.z,
+                -1.0*msg->angular_velocity.x,
                 -1.0*msg->angular_velocity.y
             );
 
             ekf_->predictUpdate(accel, gyro, delta_time.seconds());
-            ekf_->measurementUpdate(visual_odometry_, 0.05);
+            ekf_->measurementUpdate(visual_odometry_, 0.1);
 
             auto pose = common::createPoseMsg(ekf_->getOdometry());
             pose.header.frame_id = frame_id_;

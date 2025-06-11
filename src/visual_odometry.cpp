@@ -5,6 +5,8 @@ namespace visual_odometry
     VisualOdometry::VisualOdometry()
     {
         odom_ = rgbd::RgbdOdometry::create();
+        odom_->setMinDepth(0.6);
+        odom_->setMaxDepth(6.0);
 
         update_pose_ = Mat::eye(4,4,CV_32F);
 

@@ -65,7 +65,7 @@ namespace ekf
         x_quat_.normalize();
 
         const mat9x9_t I = mat9x9_t::Identity();
-        cov_ = (I - K * h_jacob) * cov_;
+        cov_ = (I - K * h_jacob) * cov_;   
     }
 
     vec7_t EKF::getOdometry()

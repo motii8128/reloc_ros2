@@ -38,6 +38,13 @@ namespace common
         return quat_t(aa);
     }
 
+    vec3_t quat2angle(const quat_t& q)
+    {
+        quat_t q_norm = q.normalized();
+        Eigen::AngleAxisf angle_axis(q_norm);
+        return angle_axis.axis() * angle_axis.angle();
+    }
+
     geometry_msgs::msg::PoseStamped createPoseMsg(const vec7_t& v)
     {
         auto p = geometry_msgs::msg::PoseStamped();

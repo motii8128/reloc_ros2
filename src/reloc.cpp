@@ -75,8 +75,8 @@ namespace reloc_ros2
         if(!initalize_ekf_)
         {
             ekf_->setEstNoise(
-                msg->linear_acceleration_covariance[0],
-                msg->angular_velocity_covariance[0],
+                0.1,
+                0.1,
                 1.0
             );
 
@@ -85,7 +85,7 @@ namespace reloc_ros2
 
         if(success_vo_)
         {
-            RCLCPP_INFO(this->get_logger(), "compute ekf...");
+            if(enable_log_)RCLCPP_INFO(this->get_logger(), "compute ekf...");
 
             auto accel = vec3_t(
                 -1.0*msg->linear_acceleration.z,
@@ -94,7 +94,7 @@ namespace reloc_ros2
             );
 
             auto gyro = vec3_t(
-                msg->angular_velocity.z,
+                -1.0*msg->angular_velocity.z,
                 -1.0*msg->angular_velocity.x,
                 -1.0*msg->angular_velocity.y
             );

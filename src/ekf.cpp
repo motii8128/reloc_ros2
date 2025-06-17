@@ -8,7 +8,7 @@ namespace ekf
         x_velocity_ = vec3_t(0.0, 0.0, 0.0);
         x_quat_ = quat_t(1.0, 0.0, 0.0, 0.0);
 
-        cov_ = mat9x9_t::Identity() * 0.01;
+        cov_ = mat_t<9,9>::Identity() * 0.01;
     }
 
     void EKF::setEstNoise(const double& accel_var, const double& gyro_var, const double delta_time)
@@ -35,29 +35,29 @@ namespace ekf
         x_quat_ = x_quat_ * gyro2quat(imu_gyro, delta_time);
         x_quat_.normalize();
 
-        mat9x9_t F = mat9x9_t::Identity();
+        mat_t<9,9> F = mat_t<9,9>::Identity();
         F.block<3,3>(0,3) = delta_time * mat3x3_t::Identity();
         F.block<3,3>(3,6) = -1.0 * last_rotation_matrix * skew_symmetric(imu_accel) * delta_time;
 
-        mat9x6_t l_jacob = mat9x6_t::Zero();
-        l_jacob.block<6,6>(3,0) = mat6x6_t::Identity();
+        mat_t<9,6> l_jacob = mat_t<9,6>::Zero();
+        l_jacob.block<6,6>(3,0) = mat_t<6,6>::Identity();
 
         cov_ = F * cov_ * F.transpose() + l_jacob * estimation_noise_ * l_jacob.transpose();
     }
 
-    void EKF::measurementUpdate(const vec7_t& observation, const double& obs_var)
+    void EKF::measurementUpdate(const mat_t<7,1>& observation, const double& obs_var)
     {
-        mat3x9_t h_jacob = mat3x9_t::Zero();
+        mat_t<3,9> h_jacob = mat_t<3,9>::Zero();
         h_jacob.block<3,3>(0,0) = mat3x3_t::Identity();
 
         mat3x3_t observation_noise = obs_var * mat3x3_t::Identity();
 
-        const mat9x3_t K = cov_ * h_jacob.transpose() * (h_jacob * cov_ * h_jacob.transpose() + observation_noise).inverse();
+        const mat_t<9,3> K = cov_ * h_jacob.transpose() * (h_jacob * cov_ * h_jacob.transpose() + observation_noise).inverse();
 
         vec3_t obs_pose = vec3_t(observation(0), observation(1), observation(2));
 
         const vec3_t residual = obs_pose - x_position_;
-        vec9_t delta_x = K * residual;
+        mat_t<9,1> delta_x = K * residual;
 
         x_position_ += delta_x.segment<3>(0);
         x_velocity_ += delta_x.segment<3>(3);
@@ -67,13 +67,13 @@ namespace ekf
         x_quat_ = x_quat_ * angle2quat(d_theta);
         x_quat_.normalize();
 
-        const mat9x9_t I = mat9x9_t::Identity();
+        const mat_t<9,9> I = mat_t<9,9>::Identity();
         cov_ = (I - K * h_jacob) * cov_;   
     }
 
-    vec7_t EKF::getOdometry()
+    mat_t<7,1> EKF::getOdometry()
     {
-        return vec7_t(
+        return mat_t<7,1>(
             x_position_(0),
             x_position_(1),
             x_position_(2),

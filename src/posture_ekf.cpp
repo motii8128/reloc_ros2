@@ -7,7 +7,7 @@ namespace posture_ekf
     cov_(mat3x3_t::Identity()),
     estimation_noise_(mat3x3_t::Identity()),
     observation_noise_(mat2x2_t::Zero()),
-    kalman_gain_(mat3x2_t::Zero())
+    kalman_gain_(mat_t<3,2>::Zero())
     {
         cov_(0, 0) = 0.0174*0.001;
         cov_(1, 1) = 0.0174*0.001;
@@ -44,9 +44,9 @@ namespace posture_ekf
         );
     }
 
-    mat3x2_t h()
+    mat_t<3,2> h()
     {
-        mat3x2_t h_;
+        mat_t<3,2> h_;
         h_.setZero();
         h_(0, 0) = 1.0;
         h_(1, 1) = 1.0;
@@ -112,7 +112,7 @@ namespace posture_ekf
     vec2_t updateResidual(const vec2_t &obs, const vec3_t &est)
     {
         vec2_t result;
-        mat2x3_t h_ = h().transpose();
+        mat_t<2,3> h_ = h().transpose();
         vec2_t h_est = h_ * est;
 
         result(0) = obs.x() - h_est.x();
@@ -123,25 +123,25 @@ namespace posture_ekf
 
     mat2x2_t updateS(const mat3x3_t &cov_, const mat2x2_t &obs_noise)
     {
-        mat2x3_t h_ = h().transpose();
-        mat2x3_t h_cov_ = h_ * cov_;
+        mat_t<2,3> h_ = h().transpose();
+        mat_t<2,3> h_cov_ = h_ * cov_;
         mat2x2_t convert_cov_ = h_cov_ * h();
 
         return obs_noise + convert_cov_;
     }
 
-    mat3x2_t updateKalmanGain(const mat2x2_t &s, const mat3x3_t &cov)
+    mat_t<3,2> updateKalmanGain(const mat2x2_t &s, const mat3x3_t &cov)
     {
         auto h_ = h();
 
         mat2x2_t inverse_s = s.inverse();
 
-        mat3x2_t cov_and_h = cov * h_;
+        mat_t<3,2> cov_and_h = cov * h_;
 
         return cov_and_h * inverse_s;
     }
 
-    vec3_t updateX(const vec3_t &est, const mat3x2_t &kalman_gain_, const vec2_t &residual)
+    vec3_t updateX(const vec3_t &est, const mat_t<3,2> &kalman_gain_, const vec2_t &residual)
     {
         vec3_t kalman_res = kalman_gain_ * residual;
 
@@ -155,12 +155,12 @@ namespace posture_ekf
         return result;
     }
 
-    mat3x3_t updateCov(const mat3x2_t &kalman_gain, const mat3x3_t &cov)
+    mat3x3_t updateCov(const mat_t<3,2> &kalman_gain, const mat3x3_t &cov)
     {
         mat3x3_t i;
         i.setIdentity();
 
-        mat2x3_t h_ = h().transpose();
+        mat_t<2,3> h_ = h().transpose();
 
         mat3x3_t kalman_h = kalman_gain * h_;
 

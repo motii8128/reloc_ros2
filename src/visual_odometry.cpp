@@ -10,7 +10,7 @@ namespace visual_odometry
 
         update_pose_ = Mat::eye(4,4,CV_32F);
 
-        pose_ = common::vec7_t::Zero();
+        pose_ = common::mat_t<7,1>::Zero();
         initalized_ = false;
     }
 
@@ -116,12 +116,12 @@ namespace visual_odometry
         }
     }
 
-    common::vec7_t VisualOdometry::getOdometry()
+    common::mat_t<7,1> VisualOdometry::getOdometry()
     {
         return pose_;
     }
 
-    common::vec7_t result2vec7(Mat mat)
+    common::mat_t<7,1> result2vec7(Mat mat)
     {
         tf2::Matrix3x3 rotation(
             mat.at<float>(0,0),mat.at<float>(0,1),mat.at<float>(0,2),
@@ -134,7 +134,7 @@ namespace visual_odometry
         rotation.getRPY(r,p,y);
         q.setEuler(0.0, 0.0, -1.0*p);
 
-        common::vec7_t v;
+        common::mat_t<7,1> v;
         v(0) = mat.at<float>(2,3);
         v(1) = -1.0*mat.at<float>(0,3);
         v(2) = -1.0*mat.at<float>(1,3);

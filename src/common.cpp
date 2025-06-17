@@ -45,7 +45,7 @@ namespace common
         return angle_axis.axis() * angle_axis.angle();
     }
 
-    geometry_msgs::msg::PoseStamped createPoseMsg(const vec7_t& v)
+    geometry_msgs::msg::PoseStamped createPoseMsg(const mat_t<7,1>& v)
     {
         auto p = geometry_msgs::msg::PoseStamped();
         p.pose.position.x = v(0);

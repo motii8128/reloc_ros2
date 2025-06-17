@@ -1,5 +1,5 @@
-#ifndef MOTISLAM_POSTUER_EKF_HPP_
-#define MOTISLAM_POSTUER_EKF_HPP_
+#ifndef POSTUER_EKF_HPP_
+#define POSTUER_EKF_HPP_
 
 #include "common.hpp"
 
@@ -24,12 +24,12 @@ namespace posture_ekf
         mat3x3_t cov_;
         mat3x3_t estimation_noise_;
         mat2x2_t observation_noise_;
-        mat3x2_t kalman_gain_;
+        mat_t<3,2> kalman_gain_;
         vec3_t estimation_;
     };
     vec3_t getInputMatrix(const vec3_t& angular_velocity, const double &dt);
 
-    mat3x2_t h();
+    mat_t<3,2> h();
 
     mat3x3_t jacob(const vec3_t &input_matrix, const vec3_t &estimation);
 
@@ -41,11 +41,11 @@ namespace posture_ekf
 
     mat2x2_t updateS(const mat3x3_t &cov_, const mat2x2_t &obs_noise);
 
-    mat3x2_t updateKalmanGain(const mat2x2_t &s, const mat3x3_t &cov);
+    mat_t<3,2> updateKalmanGain(const mat2x2_t &s, const mat3x3_t &cov);
 
-    vec3_t updateX(const vec3_t &est, const mat3x2_t &kalman_gain_, const vec2_t &residual);
+    vec3_t updateX(const vec3_t &est, const mat_t<3,2> &kalman_gain_, const vec2_t &residual);
 
-    mat3x3_t updateCov(const mat3x2_t &kalman_gain, const mat3x3_t &cov);
+    mat3x3_t updateCov(const mat_t<3,2> &kalman_gain, const mat3x3_t &cov);
 
     vec2_t obsModel(const vec3_t &linear_accel);
 }

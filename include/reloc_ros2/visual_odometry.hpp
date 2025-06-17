@@ -20,10 +20,11 @@ namespace visual_odometry
 
         void setCameraMatrix(float fx, float fy, float cx, float cy);
         bool compute(Mat& rgb_image, Mat& depth_image);
+        bool compute(Mat& rgb_image, Mat& depth_image, common::quat_t posture);
         common::vec7_t getOdometry();
 
         private:
-        Ptr<rgbd::RgbdOdometry> odom_;
+        Ptr<rgbd::RgbdICPOdometry> odom_;
         cv::Mat last_rgb_image_, last_depth_image_;
         bool initalized_;
         common::vec7_t pose_;

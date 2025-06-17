@@ -16,6 +16,8 @@ namespace reloc_ros2
         vo_ = std::make_shared<VisualOdometry>();
         visual_odometry_ = common::vec7_t();
         ekf_ = std::make_shared<EKF>();
+        posture_ekf_ = std::make_shared<ImuPostureEKF>();
+        posture_ = common::quat_t(1.0, 0.0, 0.0, 0.0);
 
         pose_publisher_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("/pose", 0);
         path_publisher_ = this->create_publisher<nav_msgs::msg::Path>("/path", 0);
@@ -57,7 +59,8 @@ namespace reloc_ros2
 
         success_vo_ = vo_->compute(
             cv_bridge::toCvCopy(msg->rgb, msg->rgb.encoding)->image,
-            cv_bridge::toCvCopy(msg->depth, msg->depth.encoding)->image
+            cv_bridge::toCvCopy(msg->depth, msg->depth.encoding)->image,
+            posture_
         );
 
         if(success_vo_)
@@ -75,42 +78,47 @@ namespace reloc_ros2
         if(!initalize_ekf_)
         {
             ekf_->setEstNoise(
-                0.1,
-                0.1,
+                1.0,
+                0.00001,
                 1.0
             );
 
             initalize_ekf_ = true;
         }
 
+        auto accel = vec3_t(
+            -1.0*msg->linear_acceleration.z,
+            -1.0*msg->linear_acceleration.x,
+            msg->linear_acceleration.y
+        );
+
+        auto gyro = vec3_t(
+            0.0,
+            0.0,
+            -1.0*msg->angular_velocity.y
+        );
+
+        if(abs(gyro.z()) < 0.01)
+        {
+            gyro(2) = 0.0;
+        }
+        auto euler_estimation = posture_ekf_->estimate(gyro, accel, delta_time.seconds());
+        posture_ = angle2quat(euler_estimation);
+
         if(success_vo_)
         {
             if(enable_log_)RCLCPP_INFO(this->get_logger(), "compute ekf...");
-
-            auto accel = vec3_t(
-                -1.0*msg->linear_acceleration.z,
-                -1.0*msg->linear_acceleration.x,
-                msg->linear_acceleration.y
-            );
-
-            auto gyro = vec3_t(
-                -1.0*msg->angular_velocity.z,
-                -1.0*msg->angular_velocity.x,
-                -1.0*msg->angular_velocity.y
-            );
-
             ekf_->predictUpdate(accel, gyro, delta_time.seconds());
-            ekf_->measurementUpdate(visual_odometry_, 0.1);
-
-            auto pose = common::createPoseMsg(ekf_->getOdometry());
-            pose.header.frame_id = frame_id_;
-            pose.header.stamp = this->get_clock()->now();
-
-            pose_publisher_->publish(pose);
-            path_.poses.push_back(pose);
-            path_publisher_->publish(path_);
-
+            ekf_->measurementUpdate(visual_odometry_, 0.25);
         }
+
+        auto pose = common::createPoseMsg(ekf_->getOdometry());
+        pose.header.frame_id = frame_id_;
+        pose.header.stamp = this->get_clock()->now();
+
+        pose_publisher_->publish(pose);
+        path_.poses.push_back(pose);
+        path_publisher_->publish(path_);
 
         last_ekf_time_ = this->get_clock()->now();
     }

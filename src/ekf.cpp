@@ -11,18 +11,21 @@ namespace ekf
         cov_ = mat9x9_t::Identity() * 0.01;
     }
 
-    void EKF::setEstNoise(const float& accel_var, const float& gyro_var, const float delta_time)
+    void EKF::setEstNoise(const double& accel_var, const double& gyro_var, const double delta_time)
     {
         estimation_noise_.block<3,3>(0,0) = accel_var * mat3x3_t::Identity();
         estimation_noise_.block<3,3>(3,3) = gyro_var * mat3x3_t::Identity();
         estimation_noise_ *= delta_time * delta_time;
     }
 
-    void EKF::predictUpdate(vec3_t& imu_accel,vec3_t& imu_gyro, const float& delta_time)
+    void EKF::predictUpdate(vec3_t& imu_accel,vec3_t& imu_gyro, const double& delta_time)
     {
         const mat3x3_t last_rotation_matrix = x_quat_.toRotationMatrix();
 
-        const vec3_t gravity = vec3_t(0.0,0.0,8.7);
+        const vec3_t gravity = vec3_t(
+            0.7453053593635559,
+            0.22555294632911682,
+            8.845598220825195);
 
         const vec3_t fixed_accel = last_rotation_matrix * imu_accel + gravity;
 
@@ -42,7 +45,7 @@ namespace ekf
         cov_ = F * cov_ * F.transpose() + l_jacob * estimation_noise_ * l_jacob.transpose();
     }
 
-    void EKF::measurementUpdate(const vec7_t& observation, const float& obs_var)
+    void EKF::measurementUpdate(const vec7_t& observation, const double& obs_var)
     {
         mat3x9_t h_jacob = mat3x9_t::Zero();
         h_jacob.block<3,3>(0,0) = mat3x3_t::Identity();

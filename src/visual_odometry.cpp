@@ -4,7 +4,7 @@ namespace visual_odometry
 {
     VisualOdometry::VisualOdometry()
     {
-        odom_ = rgbd::RgbdOdometry::create();
+        odom_ = rgbd::RgbdICPOdometry::create();
         odom_->setMinDepth(0.6);
         odom_->setMaxDepth(6.0);
 
@@ -28,6 +28,7 @@ namespace visual_odometry
 
     bool VisualOdometry::compute(Mat& rgb_image, Mat& depth_image)
     {
+        odom_->setTransformType(cv::rgbd::RgbdOdometry::RIGID_BODY_MOTION);
         Mat gray_image;
         cv::cvtColor(rgb_image, gray_image, COLOR_BGR2GRAY);
 
@@ -35,8 +36,8 @@ namespace visual_odometry
 
         if(!initalized_)
         {
-            last_rgb_image_ = gray_image;
-            last_depth_image_ = depth_image;
+            gray_image.copyTo(last_rgb_image_);
+            depth_image.copyTo(last_depth_image_);
 
             initalized_ = true;
 
@@ -54,8 +55,58 @@ namespace visual_odometry
 
             pose_ =  result2vec7(update_pose_);
 
-            last_rgb_image_ = gray_image;
-            last_depth_image_ = depth_image;
+            gray_image.copyTo(last_rgb_image_);
+            depth_image.copyTo(last_depth_image_);
+
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    bool VisualOdometry::compute(Mat& rgb_image, Mat& depth_image, common::quat_t posture)
+    {
+        odom_->setTransformType(cv::rgbd::RgbdOdometry::TRANSLATION);
+        Mat gray_image;
+        cv::cvtColor(rgb_image, gray_image, COLOR_BGR2GRAY);
+
+        depth_image.convertTo(depth_image, CV_32FC1, 1.0 / 1000.0);
+
+        if(!initalized_)
+        {
+            gray_image.copyTo(last_rgb_image_);
+            depth_image.copyTo(last_depth_image_);
+
+            initalized_ = true;
+
+            return true;
+        }
+
+        Mat Rt;
+
+        Mat initRt = Mat::eye(4,4, CV_64F);
+        common::mat3x3_t R_imu = posture.toRotationMatrix();
+        for(int i = 0; i < 3; i++)
+        {
+            for(int j = 0; j < 3; j++)
+            {
+                initRt.at<double>(i,j) = R_imu(i,j);
+            }
+        }
+
+        const auto check = odom_->compute(last_rgb_image_, last_depth_image_, Mat(), gray_image, depth_image, Mat(), Rt, initRt);
+
+        if(check)
+        {
+            Rt.convertTo(Rt, CV_32F);
+            update_pose_ = update_pose_ * Rt.inv();
+
+            pose_ =  result2vec7(update_pose_);
+
+            gray_image.copyTo(last_rgb_image_);
+            depth_image.copyTo(last_depth_image_);
 
             return true;
         }

@@ -13,9 +13,9 @@ namespace ekf
         public:
         EKF();
 
-        void setEstNoise(const float& accel_var, const float& gyro_var, const float delta_time);
-        void predictUpdate(vec3_t& imu_accel,vec3_t& imu_gyro, const float& delta_time);
-        void measurementUpdate(const vec7_t& observation, const float& obs_var);
+        void setEstNoise(const double& accel_var, const double& gyro_var, const double delta_time);
+        void predictUpdate(vec3_t& imu_accel,vec3_t& imu_gyro, const double& delta_time);
+        void measurementUpdate(const vec7_t& observation, const double& obs_var);
 
         vec7_t getOdometry();
 
